@@ -55,6 +55,7 @@
   (let [producer (.createProducerTemplate ctx)]
     (.sendBodyAndHeaders producer endpoint body headers)))
 
+;; TODO: add timeout etc.
 (defn request-body
   "Synchronously send to `endpoint` and expect a reply. Returns the reply.
 

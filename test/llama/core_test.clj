@@ -6,11 +6,10 @@
   (:import org.apache.camel.ExchangePattern
            [org.apache.camel.impl DefaultCamelContext DefaultExchange]))
 
-(defonce ctx (DefaultCamelContext.))
-
 (deftest replying
   (testing "with Message: reply works as expected"
-    (let [xchg (DefaultExchange. ctx ExchangePattern/InOut)]
+    (let [ctx (DefaultCamelContext.)
+          xchg (DefaultExchange. ctx ExchangePattern/InOut)]
       (reply xchg "hi there" :id "313" :headers {"foo" "bar"})
       (let [msg (.getOut xchg)]
         (is (= (.getBody msg) "hi there"))

@@ -57,7 +57,7 @@ Once you have a basic understanding of those, you should be able to get going. A
            org.apache.camel.builder.RouteBuilder
            [org.apache.camel.impl DefaultCamelContext DefaultMessage]))
 
-(defmacro fn->processor
+(defn fn->processor
   "Create a [Processor](http://camel.apache.org/processor.html) from `proc-fn`,
   a fn accepting one argument,
   an [Exchange](http://camel.apache.org/exchange.html). See [[process]]."
@@ -123,38 +123,47 @@ Once you have a basic understanding of those, you should be able to get going. A
            ~@(drop 1 routes))))))
 
 (defmacro from
-  "Read from `endpoint`, can be a [Camel URI](http://camel.apache.org/uris.html)
-  or an [Endpoint](http://camel.apache.org/endpoint.html). Use inside
-  a [[route]] definition. Can only be called once in a [[route]]. 
+  "Read from `endpoints`. 
+
+Must be the first expression inside a [[route]] block. Can only be called once
+  in a [[route]] block.
+
+Each endpoint in `endpoints` can be a collection of either [Camel
+  URIs](http://camel.apache.org/uris.html) or
+  an [Endpoints](http://camel.apache.org/endpoint.html).
 
   You need to have the Camel component in the classpath. For example,
   `rabbitmq://` requires the RabbitMQ component, available in `camel-rabbitmq`,
   `activemq:...` requires ActiveMQ and so on.
 
-  Make the `RouteBuilder` defined in [[route]] to read from `endpoint`. Binds
+  Makes the `RouteBuilder` defined in [[route]] to read from `endpoint`. Binds
   `this` to a `RouteDefinition` so that calls to [[to]] and [[process]] will
   work. You can call
   the [methods](https://static.javadoc.io/org.apache.camel/camel-core/2.18.2/org/apache/camel/model/RouteDefinition.html)
   of `this` to alter its behaviour. See [[route]].
 
 ```
-(route (from \"vm:foo\")
+;; will aggregate data from thee endpoints, printing the exchanges
+(route (from \"vm:foo\" \"direct:hello\" \"activemq:queue:bar\")
        (process (fn [x] (println x))))
 ```
 "
-  [endpoint]
-  `(.from ~'this ~endpoint))
+  [& endpoints]
+  `(.from ~'this ~@endpoints))
 
 (defmacro to
-  "Send data to `endpoint`, can be a [Camel
-  URI](http://camel.apache.org/uris.html) or
-  an [Endpoint](http://camel.apache.org/endpoint.html). Use inside a [[route]]
-  definition. Can be chained multiple times at any point after [[from]].
+  "Send data to `endpoints`.
+  
+Can be chained multiple times at any point after [[from]].
 
-For components see the doc in [[from]].
+Each endpoint in `endpoints` can be a collection of either [Camel
+  URIs](http://camel.apache.org/uris.html) or
+  an [Endpoints](http://camel.apache.org/endpoint.html).
 
-  Adds `endpoints`, Endpoints or String URI, sending exchanges to those
-  endpoints. Must be after a [[from]]. See [[route]].
+See the note about components in the docs for  [[from]].
+
+  Adds `endpoints`, Endpoints or String URI, to the `RouteDefinition`, sending
+  exchanges to those endpoints. Must be after a [[from]]. See [[route]].
 
 ```
 (route (from \"activemq:hello\")
@@ -162,8 +171,8 @@ For components see the doc in [[from]].
        (to \"kafka:topic:bar\"))
 ```
 "
-  [endpoint]
-  `(.to ~'this ~endpoint))
+  [& endpoints]
+  `(.to ~'this ~@endpoints))
 
 
 (defmacro process
