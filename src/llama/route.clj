@@ -1,5 +1,26 @@
 (ns llama.route
-  "A Clojure DSL for Camel Routes. See [[route]]."
+  "A Clojure DSL for [Camel Routes](http://camel.apache.org/routes.html).
+  
+### The DSL
+
+The DSL tries to be a close approximation of the [fluent DSL](http://camel.apache.org/java-dsl.html). The main
+elements of this namespace are [[route]] and [[defcontext]]. The following building blocks for routes exist:
+
+* [[from]] - read from endpoints
+* [[process] - process exchanges between endpoints
+* [[to]] - send to endpoints
+ 
+[[route]] instantiates a [[RouteBuilder]], which is what you add to a
+  *context*. These can be added to a context via [[defcontext]].
+
+(def myroute
+  (route (from \"activemq:hello\")
+         (process (fn [x] 
+
+### Running routes
+
+
+"
   (:import [org.apache.camel CamelContext Message Processor]
            org.apache.camel.builder.RouteBuilder
            [org.apache.camel.impl DefaultCamelContext DefaultMessage]))
