@@ -8,7 +8,7 @@ See the [documentation](https://ane.github.io/llama/)
 
 ## License
 
-Copyright © 2017 Antoine Kalmbac
+Copyright © 2017 Antoine Kalmbach
 
 Distributed under the Apache License either version 2.0 or (at
 your option) any later version, see [LICENSE](./LICENSE).
