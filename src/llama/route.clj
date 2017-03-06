@@ -4,7 +4,7 @@
            org.apache.camel.builder.RouteBuilder
            [org.apache.camel.impl DefaultCamelContext DefaultMessage]))
 
-(defn fn->processor
+(defn ^:no-doc fn->processor
   "Create a [Processor](http://camel.apache.org/processor.html) from `proc-fn`,
   a fn accepting one argument,
   an [Exchange](http://camel.apache.org/exchange.html). See [[process]]."
@@ -32,12 +32,14 @@
 
 ```
 (defcontext foobar
-  (route (from \"activemq:hi\")
+  (route (from \"activemq:queue:hi\")
          (process (fn [xchg] (println xchg)))
          (to \"file:blah\")))
 
-;; .nameStrategy
-(.getName foobar) ; => \"foobar\"
+(start ctx) ; pump a message to activemq on queue hi, will be printed to *out*
+            ; note: this does NOT block! use a loop if you want your program to
+            ; run
+(stop ctx) ; shut down
 ```
 "
   [name & routes]

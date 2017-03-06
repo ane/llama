@@ -27,7 +27,7 @@
   or a [Message](http://camel.apache.org/message.html). If `body` is string it is
   converted into to a `CamelMessage` and the optional `headers` are inserted as
   the message headers and `:id` as the message ID. If `body` is already a
-  Message its headers will be unaltered. See [[message]].
+  Message its headers will be unaltered. See [[message]] and [[request-body]].
 
   **Note**. Reply works only on
   an [InOut](http://camel.apache.org/request-reply.html) Exchange. Does nothing
@@ -59,7 +59,18 @@
   "Synchronously send to `endpoint` and expect a reply. Returns the reply.
 
   Send `body` (String) to `endpoint` using the `InOut` pattern. Optionally add
-  headers in `headers`."
+  headers in `headers`.
+
+```
+(route (from \"direct:foo\")
+       (process (fn [x] (reply x \"hello\"))))
+  
+;; start the route, add to context, etc.
+
+(request-body ctx \"direct:foo\")
+;; => \"hello\"
+```
+"
   [ctx endpoint body & {:keys [headers]
                         :or {headers {}}}]
   (let [producer (.createProducerTemplate ctx)]
