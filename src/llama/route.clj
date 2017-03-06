@@ -57,7 +57,7 @@ Once you have a basic understanding of those, you should be able to get going. A
            org.apache.camel.builder.RouteBuilder
            [org.apache.camel.impl DefaultCamelContext DefaultMessage]))
 
-(defn ^:no-doc fn->processor
+(defmacro fn->processor
   "Create a [Processor](http://camel.apache.org/processor.html) from `proc-fn`,
   a fn accepting one argument,
   an [Exchange](http://camel.apache.org/exchange.html). See [[process]]."
@@ -74,7 +74,6 @@ Once you have a basic understanding of those, you should be able to get going. A
     (instance? Processor p) p
     :else (throw (IllegalArgumentException.
                   (format "Arg %s not fn or Processor" p)))))
-
 
 (defmacro defcontext
   "Defines `name` to DefaultCamelContext, adding
@@ -170,10 +169,11 @@ For components see the doc in [[from]].
 (defmacro process
   "Add `p` as a processing step to this `RouteDefinition`. Useful for
   transforming a message to be sent elsewhere with [[to]], or to replying
-  with [[reply]]. Must be invoked after a call to [[from]]. `p` can be a one
-  argument fn accepting an fn accepting one argument or a
+  with [[reply]]. Must be invoked after a call to [[from]]. 
+
+`p` can be a one argument fn accepting an fn accepting one argument or a
   Processor. See [[fn->processor]]. Keep in mind, altering the exchange will
-  affect subsequent inputs [[to]] or [[process]] calls.  
+  affect subsequent inputs [[to]] or [[process]] calls.
 
 ```
 (def upper-reverse [x]
