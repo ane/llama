@@ -1,64 +1,65 @@
 (ns llama.core
-  (:import [org.apache.camel CamelContext Processor]
-           org.apache.camel.builder.RouteBuilder))
+  "Core utilities for working with Camel endpoints, messages, exchanges, etc."
+  (:import org.apache.camel.impl.DefaultMessage
+           org.apache.camel.Message))
 
-(defn fn->processor
-  "Create a [[org.apache.camel.Processor Processor]] from
-`proc-fn`."
-  [proc-fn]
-  (proxy [Processor] []
-    (process [xchg]
-      (proc-fn xchg))))
+(defn string->message
+  "Create a Message, with `body` String as the body. Optionally with
+  `:headers` (map) as the headers, and `:id` as the [message
+  id](http://camel.apache.org/correlation-identifier.html)."
+  [body & {:keys [id headers]
+           :or {id nil
+                headers (hash-map)}}]
+  (let [msg (DefaultMessage.)]
+    (doto msg
+      (.setBody body)
+      (.setHeaders (java.util.HashMap. headers))
+      (.setMessageId id))))
 
-(defmacro defprocessor
-  "Def `name` a Camel [Processor](http://camel.apache.org/processor.html)
-that runs `myfn` on the [Exchange](http://camel.apache.org/exchange.html) in `x`.
-Equivalent to `(def name (fn->processor (fn [xchg] ...)))`.
-```
-;; upper-case, reverse
-(defprocessor revUpper x
-  (->> (.getBody (.getIn x))
-       clojure.string/upper-case
-       clojure.string/reverse
-       (.setBody xchg))
-```
-"
-  [name xchg myfn]
-  `(def ~name
-     (proxy [Processor] []
-       (process [x#]
-         (let [~xchg x#]
-           ~myfn)))))
+(defn- ensure-message
+  [body id headers]
+  (if-not (instance? Message body)
+    (string->message (str body) :id id :headers headers)
+    body))
 
-(defn- ensure-fn-or-processor
-  "Barks if `p` is not fn or Processor."
-  [p]
-  (cond
-    (instance? clojure.lang.IFn p) (fn->processor p)
-    (instance? Processor p) p
-    :else (throw (IllegalArgumentException.
-                  (format "Arg %s not fn or Processor" p)))))
+(defn reply
+  "Reply successfully to an exchange with `body`. `body` can be a String message
+  or a [Message](http://camel.apache.org/message.html). If `body` is string it is
+  converted into to a `CamelMessage` and the optional `headers` are inserted as
+  the message headers and `:id` as the message ID. If `body` is already a
+  Message its headers will be unaltered. See [[message]].
 
-(defmacro builder [& body]
-  `(proxy [RouteBuilder] []
-     (configure []
-       ~@body)))
+  **Note**. Reply works only on
+  an [InOut](http://camel.apache.org/request-reply.html) Exchange. Does nothing
+  if exchange is `InOnly`.
 
-(defmacro from [endpoint & rest]
-  `(builder
-    (let [~'this (.from ~'this ~endpoint)]
-      ~@rest)))
+  ```
+  (route (from \"vm:lol\")
+       (process (fn [x] (reply x \"haha\")))
+  ```
+  "
+  [exchange body & {:keys [headers id] :or {headers (hash-map)
+                                            id nil}}]
+  (when (.isOutCapable (.getPattern exchange))
+    (let [out (.getOut exchange)
+          m (ensure-message body id headers)]
+      (.setOut exchange m))))
 
-(defmacro to [endpoint]
-  `(.to ~'this ~endpoint))
+(defn send-body
+  "Synchronously send to `endpoint`.
 
-(defmacro process [p]
-  `(let [p# (ensure-fn-or-processor ~p)]
-     (.process ~'this p#)))
+  Sends `body` (String) to `endpoint`. Optionally add headers in `headers`."
+  [ctx endpoint body & {:keys [headers]
+                        :or {headers {}}}]
+  (let [producer (.createProducerTemplate ctx)]
+    (.sendBodyAndHeaders producer endpoint body headers)))
 
-(defmacro defcontext [name & rest]
-  `(let [ctx# (DefaultCamelContext.)]
-     (.addRoutes ctx# ~@rest)
-     (def ~name ctx#)))
-  
-            
+(defn request-body
+  "Synchronously send to `endpoint` and expect a reply. Returns the reply.
+
+  Send `body` (String) to `endpoint` using the `InOut` pattern. Optionally add
+  headers in `headers`."
+  [ctx endpoint body & {:keys [headers]
+                        :or {headers {}}}]
+  (let [producer (.createProducerTemplate ctx)]
+    (.requestBodyAndHeaders producer endpoint body headers)))
