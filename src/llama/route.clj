@@ -1,25 +1,56 @@
 (ns llama.route
-  "A Clojure DSL for [Camel Routes](http://camel.apache.org/routes.html).
+  "A Clojure DSL for [Camel Routes](http://camel.apache.org/routes.html). Provides a framework from routing messages from endpoints to others.
   
 ### The DSL
 
-The DSL tries to be a close approximation of the [fluent DSL](http://camel.apache.org/java-dsl.html). The main
-elements of this namespace are [[route]] and [[defcontext]]. The following building blocks for routes exist:
+The DSL tries to be a close approximation of the [fluent
+  DSL](http://camel.apache.org/java-dsl.html). The main elements of this
+  namespace are [[route]] and [[defcontext]]. The following building blocks for
+  routes exist:
 
 * [[from]] - read from endpoints
-* [[process] - process exchanges between endpoints
+* [[process]] - process exchanges between endpoints
 * [[to]] - send to endpoints
  
 [[route]] instantiates a [[RouteBuilder]], which is what you add to a
-  *context*. These can be added to a context via [[defcontext]].
+  *context*. These can be added to a context via [[defcontext]], or by calling
+  the method `.addRoutes` on ctx directly.
 
+```
 (def myroute
   (route (from \"activemq:hello\")
          (process (fn [x] 
+```
 
 ### Running routes
 
+After the routes have been added to the context, the context can be started
+  with [[start]]. This is a non-blocking operation so if your program is simply
+  doing something with Camel you need an infinite loop of sorts. It is a good
+  idea to [[stop]] the context when your program starts. You could
+  use [component](https://github.com/stuartsierra/component) for managing the
+  lifecycle of your program.
+  
+```
+(defcontext ctx (route ...))
+(-defn main [& args]
+  (start ctx)
+  ;; your app logic here
+  (stop ctx))
+```
+  
+### Where to start?
 
+It is a good idea to learn what [Apache Camel](http://camel.apache.org) is
+  before trying to use Llama. [This StackOverflow thread](http://stackoverflow.com/questions/8845186/what-exactly-is-apache-camel)
+is a good place to start. To grok Llama, you need to understand the following:
+
+* [Endpoints](http://camel.apache.org/endpoint.html) -- sources and destinations of messages
+* [Exchanges](http://camel.apache.org/exchange.html) -- messagings between two components
+* [Routes](http://camel.apache.org/routes.html) -- how to wire exchanges between sources and destinations
+
+Once you have a basic understanding of those, you should be able to get going. Alternatively, dive in and 
+[read the tutorial](../02-tutorial.md).
 "
   (:import [org.apache.camel CamelContext Message Processor]
            org.apache.camel.builder.RouteBuilder
