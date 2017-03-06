@@ -1,6 +1,8 @@
 (ns llama.core-test
   (:require [clojure.test :refer :all]
-            [llama.core :refer :all])
+            [llama
+             [core :refer :all]
+             [route :refer :all]])
   (:import org.apache.camel.ExchangePattern
            [org.apache.camel.impl DefaultCamelContext DefaultExchange]))
 
@@ -14,3 +16,13 @@
         (is (= (.getBody msg) "hi there"))
         (is (= (.getMessageId msg) "313"))
         (is (= (.get (.getHeaders msg) "foo") "bar"))))))
+
+(deftest requesting
+  (testing "requesting a reply works"
+    (let [ctx (DefaultCamelContext.)
+          routes (route (from "direct:foo")
+                        (process (fn [x] (reply x "haha"))))]
+      (.addRoutes ctx routes)
+      (start ctx)
+      (is (= "haha" (request-body ctx "direct:foo" "hehe")))
+      (stop ctx))))

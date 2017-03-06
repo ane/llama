@@ -34,8 +34,9 @@
   if exchange is `InOnly`.
 
   ```
-  (route (from \"vm:lol\")
-       (process (fn [x] (reply x \"haha\")))
+  (route 
+     (from \"vm:lol\")
+     (process (fn [x] (reply x \"haha\")))
   ```
   "
   [exchange body & {:keys [headers id] :or {headers (hash-map)
