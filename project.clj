@@ -1,5 +1,7 @@
 (defproject llama "0.1.0-SNAPSHOT"
-  :description "FIXME: write description"
+  :description "A Clojure API for Apache Camel, currently provides an
+  incomplete routing DSL, and Akka Camel style Consumers and Producers
+  will be forthcoming."
   :url "http://example.com/FIXME"
   :license {:name "Apache License, version 2.0"
             :url "http://www.apache.org/licenses/LICENSE-2.0"}

@@ -1,6 +1,7 @@
 (ns llama.route
   "A Clojure DSL for [Camel Routes](http://camel.apache.org/routes.html). Provides a framework from routing messages from endpoints to others.
   
+
 ### The DSL
 
 The DSL tries to be a close approximation of the [fluent
@@ -50,7 +51,7 @@ is a good place to start. To grok Llama, you need to understand the following:
 * [Routes](http://camel.apache.org/routes.html) -- how to wire exchanges between sources and destinations
 
 Once you have a basic understanding of those, you should be able to get going. Alternatively, dive in and 
-[read the tutorial](../02-tutorial.md).
+[read the tutorial](./02-tutorial.html).
 "
   (:import [org.apache.camel CamelContext Message Processor]
            org.apache.camel.builder.RouteBuilder
