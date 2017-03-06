@@ -11,16 +11,17 @@
     (let [ctx (DefaultCamelContext.)
           xchg (DefaultExchange. ctx ExchangePattern/InOut)]
       (reply xchg "hi there" :id "313" :headers {"foo" "bar"})
-      (let [msg (.getOut xchg)]
-        (is (= (.getBody msg) "hi there"))
-        (is (= (.getMessageId msg) "313"))
-        (is (= (.get (.getHeaders msg) "foo") "bar"))))))
+      (let [msg (out xchg)]
+        (is (= (body msg) "hi there"))
+        (is (= (id msg) "313"))
+        (is (= (.get (headers msg) "foo") "bar"))))))
+
 
 (deftest requesting
   (testing "requesting a reply works"
     (let [ctx (DefaultCamelContext.)
           routes (route (from "direct:foo")
-                        (process (fn [x] (reply x "haha"))))]
+                        (processor (fn [x] (reply x "haha"))))]
       (.addRoutes ctx routes)
       (start ctx)
       (is (= "haha" (request-body ctx "direct:foo" "hehe")))

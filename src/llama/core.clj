@@ -82,34 +82,63 @@
   (let [producer (.createProducerTemplate ctx)]
     (.requestBodyAndHeaders producer endpoint body headers)))
 
-(defn x-in
+(defn in
   "Get the `In` part of an `InOnly` or `InOut` exchange."
   [^Exchange x]
   (.getIn x))
 
-(defn x-out
+(defn out
   "Get the `Out` part of an `InOut` exchange. Returns nil if not `InOut`."
   [^Exchange x]
   (when (out-capable? x)
     (.getOut x)))
 
 (defn body
-  "Get the body of the message `msg`. 
+  "Get the body of `msg`. 
+  
+  See [[in]] and [[out]] for getting the Message out of an Exchange.
 
-  If `clazz` is provided use a [type converter](http://camel.apache.org/type-converter.html) to cast it to `clazz`. Throws
-[`NoTypeConversionAvailableException`](http://camel.apache.org/maven/current/camel-core/apidocs/org/apache/camel/NoTypeConversionAvailableException.html)
-if conversion fails because the type converter isn't in the registry. Throws `TypeConversionException` if the conversion itself fails.
+  *Type conversions*. If `clazz` is provided use a [type
+  converter](http://camel.apache.org/type-converter.html) to cast it to
+  `clazz`. Throws
+  [`NoTypeConversionAvailableException`](http://camel.apache.org/maven/current/camel-core/apidocs/org/apache/camel/NoTypeConversionAvailableException.html)
+  if conversion fails because the type converter isn't in the registry. Throws `TypeConversionException` if the conversion *itself fails*.
 
-  Uses the context of the exchange of msg. If `msg` has no exchange and context then the `DefaultCamelcontext` is used."
-  ([^Message msg] (.getBody body))
+  Uses the context of the exchange of msg. If `msg` has no exchange and context then the `DefaultCamelcontext` is used.
+
+```
+;; read from a direct exchange, get the in part of the exchange,
+;; get the body, serialize to json using Cheshire, get :foo from the dict 
+;; and print
+(route (from \"direct:hello\")                   
+       (process                                  
+         (fn [x] (->> (x-in x)                   
+                      body                       
+                      cheshire.core/parse-string 
+                      :foo                       
+                      println))))                
+```
+"
+  ([^Message msg] (.getBody msg))
   ([^Message msg
     ^java.lang.Class clazz]
    (let [ctx (if-some [ctx (.getContext (.getExchange msg))]
                (ctx)
                (DefaultCamelContext.))
-         body (.getBody msg)]
-     (.mandatoryConvertTo (.getConverter ctx) body clazz))))
+         b (body msg)]
+     (.mandatoryConvertTo (.getConverter ctx) b clazz))))
+
+(defn headers
+  "Get the headers of `msg` as a map."
+  [^Message msg]
+  (.getHeaders msg))
+
+(defn id
+  "Get the message id of `msg`."
+  [^Message msg]
+  (.getMessageId msg))
 
 (defn set-body
+  "Set the body of `msg` to body."
   [^Message msg body]
   (.setBody msg body))

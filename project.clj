@@ -1,4 +1,4 @@
-(defproject llama "0.1.0-SNAPSHOT"
+(defproject llama/llama-core "0.1.0-SNAPSHOT"
   :description "A Clojure API for Apache Camel, currently provides an
   incomplete routing DSL, and Akka Camel style Consumers and Producers
   will be forthcoming."
@@ -9,7 +9,6 @@
                  [org.apache.camel/camel-core "2.18.2"]]
   :plugins [[lein-codox "0.10.3"]]
   :profiles {:dev {:dependencies [[org.apache.camel/camel-test "2.18.2"]
-                                  [org.apache.camel/camel-rabbitmq "2.18.2"]
                                   [ch.qos.logback/logback-classic "1.1.1"]]}}
   :codox {:source-paths ["src"]
           :doc-paths ["doc"]
