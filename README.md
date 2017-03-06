@@ -1,14 +1,14 @@
 # llama
 
-A Clojure library designed to ... well, that part is up to you.
+Work with [Apache Camel](http://camel.apache.org) using Clojure
 
 ## Usage
 
-FIXME
+See the [documentation](https://ane.github.io/llama/)
 
 ## License
 
-Copyright © 2017 FIXME
+Copyright © 2017 Antoine Kalmbac
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Distributed under the Apache License either version 2.0 or (at
+your option) any later version, see [LICENSE](./LICENSE).
