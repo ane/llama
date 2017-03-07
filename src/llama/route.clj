@@ -119,9 +119,9 @@
   [& routes]
   `(proxy [RouteBuilder] []
      (configure []
-       (.. ~'this ~@(map eval routes)))))
+       (.. ~'this ~@(map macroexpand-1 routes)))))
 
-(defn from
+(defmacro from
   "Read from `endpoints`. 
 
 Must be the first expression inside a [[route]] block. Can only be called once
@@ -150,7 +150,7 @@ Each endpoint in `endpoints` can be a collection of either [Camel
   [& endpoints]
   `(~'from (into-array (list ~@endpoints))))
 
-(defn to
+(defmacro to
   "Send data to `endpoints`.
   
 Can be chained multiple times at any point after [[from]].
@@ -174,14 +174,14 @@ See the note about components in the docs for  [[from]].
   `(~'to (into-array (list ~@endpoints))))
 
 
-(defn processor
+(defmacro process
   "Add `p` as a processing step to this `RouteDefinition`. Useful for
   transforming a message to be sent elsewhere with [[to]], or to replying
   with [[reply]]. Must be invoked after a call to [[from]]. 
 
 `p` can be a one argument fn accepting an fn accepting one argument or a
   Processor. See [[fn->processor]]. Keep in mind, altering the exchange will
-  affect subsequent inputs [[to]] or [[process]] calls.
+  affect subsequent inputs [[to]], [[guard]], [[process]] calls.
 
 ```
 (def upper-reverse [x]
@@ -207,7 +207,7 @@ See the note about components in the docs for  [[from]].
         (instance? Predicate pred) pred
         :else (throw (IllegalArgumentException. "pred is not IFn or Predicate!"))))
 
-(defn guard
+(defmacro guard
   "Add `pred` as a filtering step.
 
   `pred` should be an 1-arg function accepting an exchange and returning a boolean, or a Camel 
