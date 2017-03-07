@@ -20,7 +20,8 @@
   ```
   (def myroute
   (route (from \"activemq:hello\")
-         (process (fn [x] 
+         (process (fn [x] (println (body (in x)))))
+         (to \"file:dump?fileName=fromhello.txt\"))
   ```
 
   ### Running routes
