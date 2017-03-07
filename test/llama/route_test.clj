@@ -40,7 +40,7 @@
   (testing "filtering works"
     (let [ctx (DefaultCamelContext.)
           route (route (from "direct:bip")
-                       (filter (fn [x] (not= "hi" (body (in x)))))
+                       (guard (fn [x] (not= "hi" (body (in x)))))
                        (to "mock:filter"))]
       (.addRoutes ctx route)
       (start ctx)

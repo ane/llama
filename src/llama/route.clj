@@ -207,11 +207,11 @@ See the note about components in the docs for  [[from]].
         (instance? Predicate pred) pred
         :else (throw (IllegalArgumentException. "pred is not IFn or Predicate!"))))
 
-(defn filter
+(defn guard
   "Add `pred` as a filtering step.
 
   `pred` should be an 1-arg function accepting an exchange and returning a boolean, or a Camel 
-  [Predicate](http://camel.apache.org/predicate.html). It is inadvisable
+  [Predicate](http://camel.apache.org/predicate.html).
   "
   [pred]
   `(~'filter (fn->predicate ~pred)))
