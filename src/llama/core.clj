@@ -133,19 +133,19 @@
 
   Uses the context of the exchange of msg. If `msg` has no exchange and context then the `DefaultCamelcontext` is used.
 
-```
-;; read from a direct exchange, get the in part of the exchange,
-;; get the body, serialize to json using Cheshire, get :foo from the dict 
-;; and print
-(route (from \"direct:hello\")                   
-       (process                                  
-         (fn [x] (->> (x-in x)                   
-                      body                       
-                      cheshire.core/parse-string 
-                      :foo                       
-                      println))))                
-```
-"
+  ```
+  ;; read from a direct exchange, get the in part of the exchange,
+  ;; get the body, serialize to json using Cheshire, get :foo from the dict 
+  ;; and print
+  (route (from \"direct:hello\")                   
+         (process                                  
+           (fn [x] (->> (in x)                   
+                        body                       
+                        cheshire.core/parse-string 
+                        :foo                       
+                        println))))                
+  ```
+  "
   ([^Message msg] (.getBody msg))
   ([^Message msg
     ^java.lang.Class clazz]
