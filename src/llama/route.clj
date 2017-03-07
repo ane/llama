@@ -10,8 +10,10 @@
   routes exist:
 
   * [[from]] - read from endpoints
-  * [[process]] - process exchanges between endpoints
   * [[to]] - send to endpoints
+  * [[process]] - process exchanges between endpoints
+  * [[foreach]] - apply functions to messages of the exchanges
+  * [[guard]] - filter exchanges with predicates
   
   [[route]] instantiates a [[RouteBuilder]], which is what you add to a
   *context*. These can be added to a context via [[defcontext]], or by calling
@@ -36,11 +38,11 @@
   lifecycle of your program.
   
   ```
-  (defcontext ctx (route ...))
+  (defcontext ctx myroute)
   (-defn main [& args]
-  (start ctx)
-  ;; your app logic here
-  (stop ctx))
+    (start ctx)
+    ;; your app logic here
+    (stop ctx))
   ```
   
   ### Where to start?
@@ -59,7 +61,7 @@
   (:import [org.apache.camel CamelContext Predicate Processor]
            org.apache.camel.builder.RouteBuilder
            org.apache.camel.impl.DefaultCamelContext)
-  (:require [clojure.walk :as walk]))
+  (require [llama.core :refer :all]))
 
 (defn fn->processor
   "Create a [Processor](http://camel.apache.org/processor.html) from `proc-fn`,
@@ -86,24 +88,24 @@
   started. Sets `nameStragety` field of `ctx` to `name`. **Remember**, nothing will start unless you call
   `(start name)`. See [[start]] and [[stop]].
 
-```
-(defcontext foobar
+  ```
+  (defcontext foobar
   (route (from \"activemq:queue:hi\")
          (process (fn [xchg] (println xchg)))
          (to \"file:blah\")))
 
-(start ctx) ; pump a message to activemq on queue hi, will be printed to *out*
-            ; note: this does NOT block! use a loop if you want your program to
-            ; run
-(stop ctx) ; shut down
-```
-"
+  (start ctx) ; pump a message to activemq on queue hi, will be printed to *out*
+              ; note: this does NOT block! use a loop if you want your program to
+              ; run
+  (stop ctx)  ; shut down
+  ```
+  "
   [name & routes]
   `(let [ctx# (DefaultCamelContext.)]
-    (.setName ctx# (str '~name))
-    (doseq [route# (list ~@routes)]
-      (.addRoutes ctx# route#))
-    (def ~name ctx#)))
+     (.setName ctx# (str '~name))
+     (doseq [route# (list ~@routes)]
+       (.addRoutes ctx# route#))
+     (def ~name ctx#)))
 
 (defmacro route
   "Build a Camel [Route](http://camel.apache.org/routes.html), using [[from]], [[to]], [[process]] etc.
@@ -113,12 +115,12 @@
   either [[process]] or [[to]]. Note, adding a route with just a from, i.e., an
   empty `rest`, results an error when you start the context.
 
-```
-(route 
-  (from \"activemq:queue:hi\")
-  (process (fn [x] (println x)))
-  (to \"rabbitmq:blah\"))
-```"
+  ```
+  (route 
+    (from \"activemq:queue:hi\")
+    (process (fn [x] (println x)))
+    (to \"rabbitmq:blah\"))
+  ```"
   [& routes]
   `(proxy [RouteBuilder] []
      (configure []
@@ -127,10 +129,10 @@
 (defmacro from
   "Read from `endpoints`. 
 
-Must be the first expression inside a [[route]] block. Can only be called once
+  Must be the first expression inside a [[route]] block. Can only be called once
   in a [[route]] block.
 
-Each endpoint in `endpoints` can be a collection of either [Camel
+  Each endpoint in `endpoints` can be a collection of either [Camel
   URIs](http://camel.apache.org/uris.html) or
   an [Endpoints](http://camel.apache.org/endpoint.html).
 
@@ -144,25 +146,25 @@ Each endpoint in `endpoints` can be a collection of either [Camel
   the [methods](https://static.javadoc.io/org.apache.camel/camel-core/2.18.2/org/apache/camel/model/RouteDefinition.html)
   of `this` to alter its behaviour. See [[route]].
 
-```
-;; will aggregate data from thee endpoints, printing the exchanges
-(route (from \"vm:foo\" \"direct:hello\" \"activemq:queue:bar\")
-       (process (fn [x] (println x))))
-```
-"
+  ```
+  ;; will aggregate data from thee endpoints, printing the exchanges
+  (route (from \"vm:foo\" \"direct:hello\" \"activemq:queue:bar\")
+         (process (fn [x] (println x))))
+  ```
+  "
   [& endpoints]
   `(~'from (into-array (list ~@endpoints))))
 
 (defmacro to
   "Send data to `endpoints`.
   
-Can be chained multiple times at any point after [[from]].
+  Can be chained multiple times at any point after [[from]].
 
-Each endpoint in `endpoints` can be a collection of either [Camel
+  Each endpoint in `endpoints` can be a collection of either [Camel
   URIs](http://camel.apache.org/uris.html) or
   an [Endpoints](http://camel.apache.org/endpoint.html).
 
-See the note about components in the docs for  [[from]].
+  See the note about components in the docs for [[from]].
 
   Adds `endpoints`, Endpoints or String URI, to the `RouteDefinition`, sending
   exchanges to those endpoints. Must be after a [[from]]. See [[route]].
@@ -182,23 +184,23 @@ See the note about components in the docs for  [[from]].
   transforming a message to be sent elsewhere with [[to]], or to replying
   with [[reply]]. Must be invoked after a call to [[from]]. 
 
-`p` can be a one argument fn accepting an fn accepting one argument or a
+  `p` can be a one argument fn accepting an fn accepting one argument or a
   Processor. See [[fn->processor]]. Keep in mind, altering the exchange will
   affect subsequent inputs [[to]], [[guard]], [[process]] calls.
 
-```
-(def upper-reverse [x]
+  ```
+  (def upper-reverse [x]
   (->> (.getBody (.getIn x)) ;; or (.. x (.getIn) (.getBody))
        clojure.string/upper-case
        clojure.string/reverse
        (.setBody xchg)))
 
-;; creates a Jetty REST server
-(route (from \"jetty://localhost:33221/hello\")
-       (process upper-reverse)
-       (to \"log:hello\")
-```
-"
+  ;; creates a Jetty REST server
+  (route (from \"jetty://localhost:33221/hello\")
+         (process upper-reverse)
+         (to \"log:hello\")
+  ```
+  "
   [p]
   `(~'process (ensure-fn-or-processor ~p)))
 
@@ -211,14 +213,43 @@ See the note about components in the docs for  [[from]].
         :else (throw (IllegalArgumentException. "pred is not IFn or Predicate!"))))
 
 (defmacro guard
-  "Add `pred` as a filtering step.
+  "Add `pred` as a filtering step. Operates on the exchange.
+
+  A filter needs a downstream component, like [[to]] or [[process]]. It would be
+  pretty useless otherwise, right? Without it, starting the associated context
+  will blow up during start-up.
 
   `pred` should be an 1-arg function accepting an exchange and returning a boolean, or a Camel 
   [Predicate](http://camel.apache.org/predicate.html).
+  
+```
+(route (from \"direct:foo\")
+       (guard (fn [x] (starts-with? \"hello\" (body (in x)))))
+       (process (fn [x] (println (str \"Made it:\" (body (in x))))))
+       (to \"mock:faa\"))
+```
   "
   [pred]
   `(~'filter (fn->predicate ~pred)))
-     
+
+(defmacro foreach 
+  "Do something to the message(s) of the exchange. Like process, but operates on
+  the in or out part of the exchange. `f1` should be fn of one argument. Apply
+  `f1` to the **In** message. With second arg `f2` apply it to the **Out**
+  message.
+
+  ```
+  (route (from \"direct:asdf\")
+         (foreach (comp println body)))
+  ```
+  "
+  ([f1] `(~'process (fn->processor (fn [x#] (~f1 (~in x#))))))
+  ([f1 f2]
+   `(~'process
+     (fn->processor (fn [x#]
+                      (do
+                        (~f1 (~in x#))
+                        (~f2 (~out x#))))))))
 
 (defn start
   "Starts `ctx`, does not block."
@@ -229,3 +260,16 @@ See the note about components in the docs for  [[from]].
   "Stops `ctx`, shutting down all routes that go along with it."
   [^CamelContext ctx]
   (.stop ctx))
+
+(defn context
+  "Create a CamelContext. Optionally pass a [JNDI
+  Context](http://docs.oracle.com/javase/7/docs/api/javax/naming/Context.html?is-external=true)
+  or [Registry](http://camel.apache.org/registry.html)."
+  ([] (DefaultCamelContext.))
+  ([ctx-or-reg] (DefaultCamelContext. ctx-or-reg)))
+
+(defn add-routes
+  "Add the routes in `routes` to `ctx`."
+  [ctx routes]
+  (.addRoutes ctx routes))
+

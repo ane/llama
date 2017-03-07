@@ -1,9 +1,9 @@
 (ns llama.core
   "Core utilities for working with Camel endpoints, messages, exchanges, etc."
-  (:import [org.apache.camel Exchange Message]
-           [org.apache.camel.impl DefaultCamelContext DefaultMessage]))
+  (:import [org.apache.camel Exchange ExchangePattern Message]
+           [org.apache.camel.impl DefaultCamelContext DefaultExchange DefaultMessage]))
 
-(defn string->message
+(defn message
   "Create a Message, with `body` String as the body. Optionally with
   `:headers` (map) as the headers, and `:id` as the [message
   id](http://camel.apache.org/correlation-identifier.html)."
@@ -16,10 +16,32 @@
       (.setHeaders (java.util.HashMap. headers))
       (.setMessageId id))))
 
+(defn exchange
+  "Create an exchange on context `on`. Can set `in` as the `In` message. If third arg is truthy,
+  set the exchange pattern as `InOut`. See [[message]] and [[reply]].
+
+  `on` can be either a context, another exchange or an endpoint.
+  ```
+  (body (in (exchange ctx (message \"hi\"))))
+  ;; => \"hi\"
+  
+  (out-capable? (exchange ctx (message \"hi\") :out))
+  ;; => true
+  ```
+  "
+  ([on] (DefaultExchange. on))
+  ([on in] (let [xchg (exchange on)]
+             (.setIn xchg in)
+             xchg))
+  ([on in out] (let [xchg (exchange on in)]
+                 (when out
+                   (.setPattern xchg ExchangePattern/InOut))
+                 xchg)))
+
 (defn- ensure-message
   [body id headers]
   (if-not (instance? Message body)
-    (string->message (str body) :id id :headers headers)
+    (message (str body) :id id :headers headers)
     body))
 
 (defn out-capable?
@@ -29,10 +51,11 @@
 
 (defn reply
   "Reply successfully to an exchange with `body`. `body` can be a String message
-  or a [Message](http://camel.apache.org/message.html). If `body` is string it is
-  converted into to a `CamelMessage` and the optional `headers` are inserted as
+  or a [Message](http://camel.apache.org/message.html). If `body` is string it
+  is converted into to a `Message` and the optional `headers` are inserted as
   the message headers and `:id` as the message ID. If `body` is already a
-  Message its headers will be unaltered. See [[message]] and [[request-body]].
+  Message its headers and id will be unaltered. See [[message]]
+  and [[request-body]].
 
   **Note**. Reply works only on
   an [InOut](http://camel.apache.org/request-reply.html) Exchange. Does nothing
@@ -42,6 +65,9 @@
   (route 
      (from \"vm:lol\")
      (process (fn [x] (reply x \"haha\")))
+  
+  (request-body ctx \"vm:lol\" \"hi\")
+  ;; => \"haha\"
   ```
   "
   [exchange body & {:keys [headers id] :or {headers (hash-map)
@@ -51,8 +77,9 @@
           m (ensure-message body id headers)]
       (.setOut exchange m))))
 
+
 (defn send-body
-  "Synchronously send to `endpoint`.
+  "Synchronously send `body` as message to `endpoint`.
 
   Sends `body` (String) to `endpoint`. Optionally add headers in `headers`."
   [ctx endpoint body & {:keys [headers]
@@ -62,21 +89,21 @@
 
 ;; TODO: add timeout etc.
 (defn request-body
-  "Synchronously send to `endpoint` and expect a reply. Returns the reply.
+  "Synchronously send to `endpoint` and expect a reply, returns the reply.
 
-  Send `body` (String) to `endpoint` using the `InOut` pattern. Optionally add
+  Send `body` (String) to `endpoint` using the `InOut` pattern. Optionally send
   headers in `headers`.
 
-```
-(route (from \"direct:foo\")
+  ```
+  (route (from \"direct:foo\")
        (process (fn [x] (reply x \"Is it African or European?\"))))
   
-;; start the route, add to context, etc.
+  ;; start the route, add to context, etc.
 
-(request-body ctx \"direct:foo\" \"How much weight can an unladen swallow carry?\")
-;; => \"Is it African or European?\"
-```
-"
+  (request-body ctx \"direct:foo\" \"How much weight can an unladen swallow carry?\")
+  ;; => \"Is it African or European?\"
+  ```
+  "
   [ctx endpoint body & {:keys [headers]
                         :or {headers {}}}]
   (let [producer (.createProducerTemplate ctx)]
@@ -142,3 +169,14 @@
   "Set the body of `msg` to body."
   [^Message msg body]
   (.setBody msg body))
+
+(defn set-in
+  "Set the **In** part of an exchange to `m`."
+  [xchg m]
+  (.setIn xchg m))
+
+(defn set-out
+  "Set the **Out** part of an exchange to `m`. No-op on **InOnly** exchanges."
+  [xchg m]
+  (when (out-capable? xchg)
+    (.setOut xchg m)))

@@ -3,29 +3,28 @@
              [string :as str]
              [test :refer [deftest is testing]]]
             [llama
-             [core :refer [body in send-body]]
+             [core :refer :all]
              [route :refer :all]
              [testing :refer [expect-bodies mock mock-satisfied?]]])
   (:import [org.apache.camel.impl DefaultCamelContext DefaultExchange DefaultMessage]))
 
 (deftest processor-test
   (testing "processor composes well"
-    (let [ctx (DefaultCamelContext.)
-          xchg (DefaultExchange. ctx)
-          msg (doto (DefaultMessage.)
-                (.setBody "hello"))]
+    (let [ctx (context)
+          xchg (exchange ctx)
+          msg (message "hello")]
       (let [p (fn [x]
                 (->> (body (in x))
                      str/upper-case
                      str/reverse
-                     (.setBody (in x))))]
+                     (set-body (in x))))]
         (.setIn xchg msg)
         (.process (fn->processor p) xchg)
         (is (= "OLLEH" (body (in xchg))))))))
 
 (deftest routing
   (testing "routing works"
-    (let [ctx (DefaultCamelContext.)
+    (let [ctx (context)
           route (route (from "direct:bip") 
                        (to "mock:foo"))]
       (.addRoutes ctx route)
