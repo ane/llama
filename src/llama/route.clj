@@ -18,10 +18,12 @@
   the method `.addRoutes` on ctx directly.
 
   ```
+  ;; read from (local) ActiveMQ queue hello, print the body of the incoming
+  ;; message, write the exchange to a file in `dump/fromHello.txt`.
   (def myroute
-  (route (from \"activemq:hello\")
-         (process (fn [x] (println (body (in x)))))
-         (to \"file:dump?fileName=fromhello.txt\"))
+    (route (from \"activemq:hello\")
+           (process (fn [x] (println (body (in x)))))
+           (to \"file:dump?fileName=fromhello.txt\"))
   ```
 
   ### Running routes
