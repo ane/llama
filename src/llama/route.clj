@@ -11,8 +11,7 @@
 
   * [[from]] - read from endpoints
   * [[to]] - send to endpoints
-  * [[process]] - process exchanges between endpoints
-  * [[foreach]] - apply functions to messages of the exchanges
+  * [[process]] - do things to echanges
   * [[guard]] - filter exchanges with predicates
   
   [[route]] instantiates a [[RouteBuilder]], which is what you add to a
@@ -181,23 +180,20 @@
 
 (defmacro process
   "Add `p` as a processing step to this `RouteDefinition`. Useful for
-  transforming a message to be sent elsewhere with [[to]], or to replying
-  with [[reply]]. Must be invoked after a call to [[from]]. 
+  transforming a message before sending it forward with [[to]], or to replying
+  to it with [[reply]]. Must be invoked after a call to [[from]]. 
+
+  See also [[in]], [[out]], [[set-in]] and [[set-out]].
 
   `p` can be a one argument fn accepting an fn accepting one argument or a
   Processor. See [[fn->processor]]. Keep in mind, altering the exchange will
   affect subsequent inputs [[to]], [[guard]], [[process]] calls.
 
   ```
-  (def upper-reverse [x]
-  (->> (.getBody (.getIn x)) ;; or (.. x (.getIn) (.getBody))
-       clojure.string/upper-case
-       clojure.string/reverse
-       (.setBody xchg)))
-
-  ;; creates a Jetty REST server
+  ;; creates a Jetty HTTP server
+  ;; get in -> get body -> reverse -> print
   (route (from \"jetty://localhost:33221/hello\")
-         (process upper-reverse)
+         (process (comp println clojure.string/reverse body in))
          (to \"log:hello\")
   ```
   "
@@ -213,7 +209,8 @@
         :else (throw (IllegalArgumentException. "pred is not IFn or Predicate!"))))
 
 (defmacro guard
-  "Add `pred` as a filtering step. Operates on the exchange.
+  "Add `pred` as a filtering step. Operates on the exchange.  Equivalent to the
+  `filter` step of the Java DSL.
 
   A filter needs a downstream component, like [[to]] or [[process]]. It would be
   pretty useless otherwise, right? Without it, starting the associated context
@@ -231,25 +228,6 @@
   "
   [pred]
   `(~'filter (fn->predicate ~pred)))
-
-(defmacro foreach 
-  "Do something to the message(s) of the exchange. Like process, but operates on
-  the in or out part of the exchange. `f1` should be fn of one argument. Apply
-  `f1` to the **In** message. With second arg `f2` apply it to the **Out**
-  message.
-
-  ```
-  (route (from \"direct:asdf\")
-         (foreach (comp println body)))
-  ```
-  "
-  ([f1] `(~'process (fn->processor (fn [x#] (~f1 (~in x#))))))
-  ([f1 f2]
-   `(~'process
-     (fn->processor (fn [x#]
-                      (do
-                        (~f1 (~in x#))
-                        (~f2 (~out x#))))))))
 
 (defn start
   "Starts `ctx`, does not block."
