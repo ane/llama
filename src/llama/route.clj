@@ -1,18 +1,12 @@
 (ns llama.route
-  "A Clojure DSL for [Camel Routes](http://camel.apache.org/routes.html). Provides a framework from routing messages from endpoints to others.
+  "A Clojure DSL for [Camel Routes](http://camel.apache.org/routes.html).
+  Provides a framework from routing messages between endpoints.
   
-
   ### The DSL
 
   The DSL tries to be a close approximation of the [fluent
-  DSL](http://camel.apache.org/java-dsl.html). The main elements of this
-  namespace are [[route]] and [[defcontext]]. The following building blocks for
-  routes exist:
-
-  * [[from]] - read from endpoints
-  * [[to]] - send to endpoints
-  * [[process]] - do things to echanges
-  * [[guard]] - filter exchanges with predicates
+  DSL](http://camel.apache.org/java-dsl.html). This namespace provides Clojure
+  translations of the routing DSL.
   
   [[route]] instantiates a [[RouteBuilder]], which is what you add to a
   *context*. These can be added to a context via [[defcontext]], or by calling
@@ -26,6 +20,7 @@
            (process (fn [x] (println (body (in x)))))
            (to \"file:dump?fileName=fromhello.txt\"))
   ```
+  
 
   ### Running routes
 
@@ -45,6 +40,8 @@
   ```
   
   ### Where to start?
+  
+  See the [Introduction](./01-intro.html).
 
   It is a good idea to learn what [Apache Camel](http://camel.apache.org) is
   before trying to use Llama. [This StackOverflow thread](http://stackoverflow.com/questions/8845186/what-exactly-is-apache-camel)
@@ -57,6 +54,7 @@
   Once you have a basic understanding of those, you should be able to get going. Alternatively, dive in and 
   [read the tutorial](./02-tutorial.html).
   "
+  (:refer-clojure :exclude [filter] :as core)
   (:import [org.apache.camel CamelContext Predicate Processor]
            org.apache.camel.builder.RouteBuilder
            org.apache.camel.impl.DefaultCamelContext)
@@ -108,6 +106,9 @@
 
 (defmacro route
   "Build a Camel [Route](http://camel.apache.org/routes.html), using [[from]], [[to]], [[process]] etc.
+
+  An expression of `(route (from a) (foo b) (xyz) (bar baz bax))` maps directly to a Java equivalent of
+  `.from(a).foo(b).xyz().bar(baz, bax)`.
 
   Binds `this` to a `RouteBuilder`, using the definitions in `routes`. The first
   element in `route` should be a call to [[from]], followed by
@@ -187,7 +188,7 @@
 
   `p` can be a one argument fn accepting an fn accepting one argument or a
   Processor. See [[fn->processor]]. Keep in mind, altering the exchange will
-  affect subsequent inputs [[to]], [[guard]], [[process]] calls.
+  affect subsequent inputs [[to]], [[filter]], [[process]] calls.
 
   ```
   ;; creates a Jetty HTTP server
@@ -208,10 +209,9 @@
         (instance? Predicate pred) pred
         :else (throw (IllegalArgumentException. "pred is not IFn or Predicate!"))))
 
-(defmacro guard
-  "Add `pred` as a filtering step. Operates on the exchange.  Equivalent to the
-  `filter` step of the Java DSL.
-
+(defmacro filter
+  "Filter exchanges using `pred`.
+  
   A filter needs a downstream component, like [[to]] or [[process]]. It would be
   pretty useless otherwise, right? Without it, starting the associated context
   will blow up during start-up.
@@ -221,7 +221,7 @@
   
 ```
 (route (from \"direct:foo\")
-       (guard (fn [x] (starts-with? \"hello\" (body (in x)))))
+       (filter (fn [x] (starts-with? \"hello\" (body (in x)))))
        (process (fn [x] (println (str \"Made it:\" (body (in x))))))
        (to \"mock:faa\"))
 ```

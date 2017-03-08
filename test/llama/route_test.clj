@@ -1,4 +1,5 @@
 (ns llama.route-test
+  (:refer-clojure :exclude [filter] :as core)
   (:require [clojure
              [string :as str]
              [test :refer [deftest is testing]]]
@@ -39,7 +40,7 @@
   (testing "filtering works"
     (let [ctx (DefaultCamelContext.)
           route (route (from "direct:bip")
-                       (guard (fn [x] (not= "hi" (body (in x)))))
+                       (filter (fn [x] (not= "hi" (body (in x)))))
                        (to "mock:filter"))]
       (.addRoutes ctx route)
       (start ctx)

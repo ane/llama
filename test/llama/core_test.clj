@@ -1,4 +1,5 @@
 (ns llama.core-test
+  (:refer-clojure :exclude [filter] :as core)
   (:require [clojure.test :refer :all]
             [llama
              [core :refer :all]
