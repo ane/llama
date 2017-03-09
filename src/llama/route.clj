@@ -55,10 +55,11 @@
   [read the tutorial](./02-tutorial.html).
   "
   (:refer-clojure :exclude [filter] :as core)
+  (require [llama.core :refer :all])
   (:import [org.apache.camel CamelContext Predicate Processor]
            org.apache.camel.builder.RouteBuilder
-           org.apache.camel.impl.DefaultCamelContext)
-  (require [llama.core :refer :all]))
+           org.apache.camel.impl.DefaultCamelContext
+           org.apache.camel.processor.aggregate.AggregationStrategy))
 
 (defn fn->processor
   "Create a [Processor](http://camel.apache.org/processor.html) from `proc-fn`,
@@ -122,9 +123,10 @@
     (to \"rabbitmq:blah\"))
   ```"
   [& routes]
-  `(proxy [RouteBuilder] []
-     (configure []
-       (.. ~'this ~@(map macroexpand-1 routes)))))
+  (let [expanded# (map macroexpand-1 routes)]
+    `(proxy [RouteBuilder] []
+       (configure []
+         (.. ~'this ~@expanded#)))))
 
 (defmacro from
   "Read from `endpoints`. 
@@ -228,6 +230,80 @@
   "
   [pred]
   `(~'filter (fn->predicate ~pred)))
+
+(defmacro aggregate
+  "Aggregate messages into one message based on a *correlation expression* and *strategy*. 
+  
+  The correlation expression identifies how messages should be correlated for
+  aggregation. The strategy defines how the messages should be combined.
+
+  When messages messages match the expression, combine them using the provided
+  strategy. The strategy is used to reduce (i.e. fold) the messages into
+  one. The strategy should be a function of two args or a Camel
+  `Aggregationstrategy`.
+
+  The arguments will be the previous and the current exchange, and the value
+  returned should be the new exchange. The condition of the aggregation (amount,
+  time, etc.) can be comined using the completion condition (see below)
+
+  **Note.** If passing a function as the aggregator, the previous exchange is
+  `nil`, the new exchange will be returned, since the aggregating fn cannot be
+  called. Override this behaviour by creating your own `AggregationStrategy`
+  using [[aggregate]].
+  
+  
+  All of the Camel expressions are supported directly. For a list of
+  expressions, see the Camel documentation [Camel
+  documentation](http://camel.apache.org/aggregator2.html).
+  
+  And the completion condition can be one of the following macros:
+  
+  | Macro      | Java API         | Function                        | Doc 
+  |------------|------------------|---------------------------------|------
+  | `(size n)` | `completionSize` | aggregate `n` elements together | [[size]]
+
+
+  For more information, see the Camel documentation on aggregators.
+
+  ```
+  ;; group messages together that have the same value for 
+  ;; the cheese header, wait for three elements, combine their bodies,
+  ;; and send downstream
+  (route (from \"direct:hello\")
+       (aggregate (header \"cheese\") 
+                  (fn [old new] 
+                     (set-in old (message (str (body (in old))
+                                               (body (in new)))))
+                     old))
+       (size 3)
+       (to \"mock:hello\"))
+  ```
+  "
+  [expr strat] `(~'aggregate (. ~'this ~@expr)
+                 (let [strat# ~strat]
+                   (if-not (instance? AggregationStrategy strat#)
+                     (aggregator (fn [old# new#]
+                                   (if old#
+                                     (strat# old# new#)
+                                     new#)))
+                     strat#))))
+
+(defmacro header
+  [name]
+  `(. ~'this ~'header ~name))
+
+(defmacro size
+  "Used with [[aggregate]]. Expect `n` items in aggregation."
+  [n]
+  `(~'completionSize ~n))
+
+(defn aggregator
+  "Combine two exchanges into one. Takes a fn of two arguments. You can use this
+  in the aggregate element. See [[aggregate]]. "
+  [myfn]
+  (reify AggregationStrategy
+    (aggregate [this x1 x2]
+      (myfn x1 x2))))
 
 (defn start
   "Starts `ctx`, does not block."

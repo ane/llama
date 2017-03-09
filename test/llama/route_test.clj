@@ -38,7 +38,7 @@
 
 (deftest filtering
   (testing "filtering works"
-    (let [ctx (DefaultCamelContext.)
+    (let [ctx (context)
           route (route (from "direct:bip")
                        (filter (fn [x] (not= "hi" (body (in x)))))
                        (to "mock:filter"))]
@@ -50,3 +50,25 @@
         (send-body ctx "direct:bip" "hi")
         (is (mock-satisfied? endpoint)))
       (stop ctx))))
+
+(deftest aggregating
+  (let [start-endpoint "direct:beep"
+        mock-endpoint "mock:foo"]
+    (testing "aggregation works with completion size"
+      (let [ctx (context)
+            route (route (from start-endpoint)
+                         (aggregate (header "foo")
+                                    (fn [x1 x2]
+                                      (set-body (in x1) (str (body (in x1)) (body (in x2))))
+                                      x1))
+                         (size 2)
+                         (to mock-endpoint))]
+        (add-routes ctx route)
+        (start ctx)
+        (let [endpoint (mock ctx mock-endpoint)
+              uuid (java.util.UUID/randomUUID)]
+          (expect-bodies endpoint "llama llama")
+          (send-body ctx start-endpoint "llama " :headers {"foo" (str uuid)})
+          (send-body ctx start-endpoint "llama"  :headers {"foo" (str uuid)})
+          (is (mock-satisfied? endpoint)))
+        (stop ctx)))))
