@@ -307,11 +307,11 @@
 
 ```
 (def myagg (aggregator
-            (fn [x1 x2] (if-not x1
+            (fn [old new] (if-not x1
                           (do
                             (println \"First message, skipping!\")
-                            x1)
-                          (str (body (in x1)) (body (in x2)))))))
+                            old)
+                          (str (body (in old)) (body (in new)))))))
 ```
   "
   [myfn]
