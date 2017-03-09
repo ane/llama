@@ -15,10 +15,9 @@
   ```
   ;; read from (local) ActiveMQ queue hello, print the body of the incoming
   ;; message, write the exchange to a file in `dump/fromHello.txt`.
-  (def myroute
-    (route (from \"activemq:hello\")
-           (process (fn [x] (println (body (in x)))))
-           (to \"file:dump?fileName=fromhello.txt\"))
+  (route (from \"activemq:hello\")
+         (process (fn [x] (println (body (in x)))))
+         (to \"file:dump?fileName=fromhello.txt\"))
   ```
   
 
@@ -258,9 +257,9 @@
   
   And the completion condition can be one of the following macros:
   
-  | Macro      | Java API         | Function                        | Doc 
-  |------------|------------------|---------------------------------|------
-  | `(size n)` | `completionSize` | aggregate `n` elements together | [[size]]
+  | Macro | Usage | Java API | Function 
+  |-|-|-|-|
+  | [[size]]  | `(size n)` | `completionSize` | aggregate `n` elements together |
 
 
   For more information, see the Camel documentation on aggregators.
