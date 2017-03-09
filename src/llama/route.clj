@@ -297,8 +297,23 @@
   `(~'completionSize ~n))
 
 (defn aggregator
-  "Combine two exchanges into one. Takes a fn of two arguments. You can use this
-  in the aggregate element. See [[aggregate]]. "
+  "Create an aggregation strategy. Takes a fn of two arguments that combines two
+  exchanges into one. The first exchange may be null when the aggregation
+  starts, see note. You can use this with [[aggregate]].
+  
+  **Note**. When aggregation gets its first message, its content will be `nil`. The [[aggregate]]
+  function defaults to returning the first exchange when this happens, but with this behaviour you can
+  override that behaviour.
+
+```
+(def myagg (aggregator
+            (fn [x1 x2] (if-not x1
+                          (do
+                            (println \"First message, skipping!\")
+                            x1)
+                          (str (body (in x1)) (body (in x2)))))))
+```
+  "
   [myfn]
   (reify AggregationStrategy
     (aggregate [this x1 x2]
