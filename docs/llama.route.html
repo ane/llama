@@ -67,10 +67,10 @@
 <p><strong>Note</strong>. When aggregation gets its first message, its content will be <code>nil</code>. The <a href="llama.route.html#var-aggregate">aggregate</a>  function defaults to returning the first exchange when this happens, but with this behaviour you can  override that behaviour.</p>
 <pre><code>(def myagg (aggregator
             (fn [old new] (if-not x1
-                          (do
-                            (println "First message, skipping!")
-                            old)
-                          (str (body (in old)) (body (in new)))))))
+                            (do
+                              (println "First message, skipping!")
+                              old)
+                            (str (body (in old)) (body (in new)))))))
 </code></pre></div></div><div class="src-link"><a href="http://github.com/ane/llama/blob/master/src/llama/route.clj#L299">view source</a></div></div><div class="public anchor" id="var-context"><h3>context</h3><div class="usage"><code>(context)</code><code>(context ctx-or-reg)</code></div><div class="doc"><div class="markdown"><p>Create a CamelContext. Optionally pass a <a href="http://docs.oracle.com/javase/7/docs/api/javax/naming/Context.html?is-external=true">JNDI Context</a> or <a href="http://camel.apache.org/registry.html">Registry</a>.</p></div></div><div class="src-link"><a href="http://github.com/ane/llama/blob/master/src/llama/route.clj#L332">view source</a></div></div><div class="public anchor" id="var-defcontext"><h3>defcontext</h3><h4 class="type">macro</h4><div class="usage"><code>(defcontext name &amp; routes)</code></div><div class="doc"><div class="markdown"><p>Defines <code>name</code> to DefaultCamelContext, adding the <a href="https://static.javadoc.io/org.apache.camel/camel-core/2.18.2/org/apache/camel/builder/RouteBuilder.html">RouteBuilder</a> in <code>routes</code>. Note, the routes won’t start unless the context isn’t already started. Sets <code>nameStragety</code> field of <code>ctx</code> to <code>name</code>. <strong>Remember</strong>, nothing will start unless you call <code>(start name)</code>. See <a href="llama.route.html#var-start">start</a> and <a href="llama.route.html#var-stop">stop</a>.</p>
 <pre><code>(defcontext foobar
 (route (from "activemq:queue:hi")
