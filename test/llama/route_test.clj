@@ -15,13 +15,13 @@
           xchg (exchange ctx)
           msg (message "hello")]
       (let [p (fn [x]
-                (->> (body (in x))
+                (->> (in x)
                      str/upper-case
                      str/reverse
-                     (set-body (in x))))]
+                     (in! x)))]
         (.setIn xchg msg)
         (.process (fn->processor p) xchg)
-        (is (= "OLLEH" (body (in xchg))))))))
+        (is (= "OLLEH" (in xchg)))))))
 
 (deftest routing
   (testing "routing works"
@@ -40,7 +40,7 @@
   (testing "filtering works"
     (let [ctx (context)
           route (route (from "direct:bip")
-                       (filter (fn [x] (not= "hi" (body (in x)))))
+                       (filter (fn [x] (not= "hi" (in x))))
                        (to "mock:filter"))]
       (.addRoutes ctx route)
       (start ctx)
@@ -53,22 +53,25 @@
 
 (deftest aggregating
   (let [start-endpoint "direct:beep"
-        mock-endpoint "mock:foo"]
+        mock-endpoint "mock:foo"
+        aggrefn (fn [x1 x2]
+                      (if x1
+                        (do
+                          (in! x1 (str (in x1) (in x2)))
+                          x1)
+                        x2))]
     (testing "aggregation works with completion size"
       (let [ctx (context)
             route (route (from start-endpoint)
-                         (aggregate (header "foo")
-                                    (fn [x1 x2]
-                                      (set-body (in x1) (str (body (in x1)) (body (in x2))))
-                                      x1))
+                         (aggregate (header "foo") aggrefn)
                          (size 2)
                          (to mock-endpoint))]
         (add-routes ctx route)
         (start ctx)
         (let [endpoint (mock ctx mock-endpoint)
               uuid (java.util.UUID/randomUUID)]
-          (expect-bodies endpoint "llama llama")
-          (send-body ctx start-endpoint "llama " :headers {"foo" (str uuid)})
-          (send-body ctx start-endpoint "llama"  :headers {"foo" (str uuid)})
+          (expect-bodies endpoint "a quick brown fox jumped over the lazy dog")
+          (send-body ctx start-endpoint "a quick brown fox" :headers {"foo" (str uuid)})
+          (send-body ctx start-endpoint " jumped over the lazy dog"  :headers {"foo" (str uuid)})
           (is (mock-satisfied? endpoint)))
         (stop ctx)))))

@@ -1,5 +1,6 @@
 (ns llama.core
   "Core utilities for working with Camel endpoints, messages, exchanges, etc."
+  (:refer-clojure :exclude [get-in] :as core)
   (:import [org.apache.camel Exchange ExchangePattern Message]
            [org.apache.camel.impl DefaultCamelContext DefaultExchange DefaultMessage]))
 
@@ -49,7 +50,7 @@
   [^Exchange x]
   (.. x (getPattern) (isOutCapable)))
 
-(defn reply
+(defn reply!
   "Reply successfully to an exchange with `body`. `body` can be a String message
   or a [Message](http://camel.apache.org/message.html). If `body` is string it
   is converted into to a `Message` and the optional `headers` are inserted as
@@ -70,13 +71,34 @@
   ;; => \"haha\"
   ```
   "
-  [exchange body & {:keys [headers id] :or {headers (hash-map)
+  [^Exchange exchange body & {:keys [headers id] :or {headers (hash-map)
                                             id nil}}]
   (when (out-capable? exchange)
     (let [out (.getOut exchange)
           m (ensure-message body id headers)]
       (.setOut exchange m))))
 
+(defn fail!
+  "Fail the exchange because of `reason`. `reason` can be a string or
+  exception/throwable."
+  [^Exchange exchange reason]
+  (.setException exchange reason))
+
+(defn failed?
+  "Has the exchange failed (its exception is non-nil) or any of its messages
+  faulted? See also [[fault?]]."
+  [^Exchange exchange]
+  (.isFailed exchange))
+
+(defn fault!
+  "Fault the message."
+  [^Message msg]
+  (.setFault msg true))
+
+(defn fault?
+  "Has the message faulted?"
+  [^Message msg]
+  (.isFault msg))
 
 (defn send-body
   "Synchronously send `body` as message to `endpoint`.
@@ -110,15 +132,39 @@
     (.requestBodyAndHeaders producer endpoint body headers)))
 
 (defn in
-  "Get the `In` part of an `InOnly` or `InOut` exchange."
+  "With 1 arg, get the body of the **In** part of an `InOut` exchange `x`. With second arg `h`, get the header `h`
+  from `x`."
+  ([^Exchange x] (.. x getIn getBody))
+  ([^Exchange x ^String h] (.. x getIn (getHeader h))))
+
+(defn in!
+  "Set the **body** of the In message to `body`. Compare with [[set-in!]]."
+  [exchange body]
+  (set-body (get-in exchange) body))
+
+(defn out!
+  [exchange body]
+  (when (out-capable?)
+    (set-body (get-out exchange) body)))
+
+(defn get-in
   [^Exchange x]
   (.getIn x))
 
-(defn out
-  "Get the `Out` part of an `InOut` exchange. Returns nil if not `InOut`."
+(defn get-out
   [^Exchange x]
   (when (out-capable? x)
     (.getOut x)))
+
+(defn out
+  "With 1 arg, get the body of the **Out** part of an `InOut` exchange `x`. With second arg `h`, get the header `h`
+  from `x`."
+  ([^Exchange x]
+   (when (out-capable? x)
+     (.. x getOut getBody)))
+  ([^Exchange x ^String h]
+   (when (out-capable? x)
+     (.. x getOut (getHeader h)))))
 
 (defn body
   "Get the body of `msg`. 
@@ -140,7 +186,6 @@
   (route (from \"direct:hello\")                   
          (process                                  
            (fn [x] (->> (in x)                   
-                        body                       
                         cheshire.core/parse-string 
                         :foo                       
                         println))))                
@@ -165,18 +210,18 @@
   [^Message msg]
   (.getMessageId msg))
 
-(defn set-body
+(defn set-body!
   "Set the body of `msg` to body."
   [^Message msg body]
   (.setBody msg body))
 
-(defn set-in
-  "Set the **In** part of an exchange to `m`."
+(defn set-in!
+  "Set the **In** part of an exchange to `m`. If you want to set the body directly use [[in!]]."
   [xchg m]
   (.setIn xchg m))
 
-(defn set-out
-  "Set the **Out** part of an exchange to `m`. No-op on **InOnly** exchanges."
+(defn set-out!
+  "Set the **Out** part of an exchange to `m`. No-op on **InOnly** exchanges. If you want to set the body directly use [[out!]]."
   [xchg m]
   (when (out-capable? xchg)
     (.setOut xchg m)))

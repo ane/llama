@@ -16,7 +16,7 @@
   ;; read from (local) ActiveMQ queue hello, print the body of the incoming
   ;; message, write the exchange to a file in `dump/fromHello.txt`.
   (route (from \"activemq:hello\")
-         (process (fn [x] (println (body (in x)))))
+         (process (fn [x] (println (in x))))
          (to \"file:dump?fileName=fromhello.txt\"))
   ```
   
@@ -236,58 +236,64 @@
   The correlation expression identifies how messages should be correlated for
   aggregation. The strategy defines how the messages should be combined.
 
-  When messages messages match the expression, combine them using the provided
-  strategy. The strategy is used to reduce (i.e. fold) the messages into
-  one. The strategy should be a function of two args or a Camel
-  `Aggregationstrategy`.
-
-  The arguments will be the previous and the current exchange, and the value
-  returned should be the new exchange. The condition of the aggregation (amount,
-  time, etc.) can be comined using the completion condition (see below)
-
-  **Note.** If passing a function as the aggregator, the previous exchange is
-  `nil`, the new exchange will be returned, since the aggregating fn cannot be
-  called. Override this behaviour by creating your own `AggregationStrategy`
-  using [[aggregate]].
-  
-  
   All of the Camel expressions are supported directly. For a list of
-  expressions, see the Camel documentation [Camel
-  documentation](http://camel.apache.org/aggregator2.html).
+  expressions, see the [Camel
+  documentation](http://camel.apache.org/aggregator2.html). See the example
+  below for how the *header* expression is used.
   
-  And the completion condition can be one of the following macros:
+  For the strategy fn, the arguments will be the previous and the current exchange, and the value
+  returned should be the new exchange. The condition of the aggregation (amount,
+  time, etc.) can be configured using the completion condition (e.g. wait for N
+  elements).
+  
+  **Note.** When the aggregating fn is called, its first argument may be nil
+  when the aggregator is called for the first time.
+  
+  #### Completion condition
+  
+  The completion condition defines *when* the aggregation should start. You
+  could, e.g., wait for elements to come in set of three, or when they match a
+  certain predicate, or after a timeout.
+  
+  For convenience, some of the Java method calls have been named to shorter names:
   
   | Macro | Usage | Java API | Function 
   |-|-|-|-|
   | [[size]]  | `(size n)` | `completionSize` | aggregate `n` elements together |
+  | [[timeout]]  | `(timeout ms)` | `completionTimeout` | aggregate elements after `ms` milliseconds |
+  | [[interval]]  | `(interval ms)` | `completionInterval` | aggregate elements every `ms` milliseconds |
+  | [[predicate]]  | `(predicate p)` | `completionPredicate` | aggregate elements when `p` matches |
 
-
-  For more information, see the Camel documentation on aggregators.
+  For more information, see the the documentation [on
+  completion](http://camel.apache.org/aggregator2.html#Aggregator2-Aboutcompletion).
+  
+  #### Example
 
   ```
   ;; group messages together that have the same value for 
   ;; the cheese header, wait for three elements, combine their bodies,
   ;; and send downstream
   (route (from \"direct:hello\")
-       (aggregate (header \"cheese\") 
-                  (fn [old new] 
-                     (set-in old (message (str (body (in old))
-                                               (body (in new)))))
-                     old))
-       (size 3)
-       (to \"mock:hello\"))
+         (aggregate (header \"cheese\") 
+                    (fn [old new]
+                      (if old
+                        (do
+                          (in! old (str (in old) (in new)))
+                          old)
+                        new)))
+         (size 3)
+         (to \"mock:hello\"))
   ```
   "
   [expr strat] `(~'aggregate (. ~'this ~@expr)
                  (let [strat# ~strat]
                    (if-not (instance? AggregationStrategy strat#)
-                     (aggregator (fn [old# new#]
-                                   (if old#
-                                     (strat# old# new#)
-                                     new#)))
+                     (aggregator ~strat)
                      strat#))))
 
 (defmacro header
+  "Used with [[aggregate]] and [[filter]]. Creates a [header
+  expression](http://camel.apache.org/header.html)."
   [name]
   `(. ~'this ~'header ~name))
 
@@ -296,24 +302,28 @@
   [n]
   `(~'completionSize ~n))
 
+(defmacro timeout
+  "Used with [[aggregate]]. Aggregate after `ms` milliseconds."
+  [ms]
+  `(~'completionTimeout ~ms))
+
+(defmacro predicate
+  "Used with [[aggregate]]. Aggregate when `pred` matches."
+  [pred]
+  `(~'completionPredicate (fn->predicate ~pred)))
+
+(defmacro interval
+  "Used with [[aggregate]]. Aggregate every `interval` milliseconds."
+  [interval]
+  `(~'completionInterval ~interval))
+
 (defn aggregator
   "Create an aggregation strategy. Takes a fn of two arguments that combines two
-  exchanges into one. The first exchange may be null when the aggregation
-  starts, see note. You can use this with [[aggregate]].
-  
-  **Note**. When aggregation gets its first message, its content will be `nil`. The [[aggregate]]
-  function defaults to returning the first exchange when this happens, but with this behaviour you can
-  override that behaviour.
+  exchanges into one. Return the modified exchange. The first exchange may be null when the aggregation
+  starts, see note. You can use this with [[aggregate]]. 
 
-```
-(def myagg (aggregator
-            (fn [old new] (if-not x1
-                            (do
-                              (println \"First message, skipping!\")
-                              old)
-                            (str (body (in old)) (body (in new)))))))
-```
-  "
+  **Note**. When aggregation gets its first message, its content will be
+  `nil`. So be sure to check this."
   [myfn]
   (reify AggregationStrategy
     (aggregate [this x1 x2]

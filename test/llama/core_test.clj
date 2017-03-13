@@ -11,8 +11,8 @@
   (testing "with Message: reply works as expected"
     (let [ctx (context)
           xchg (exchange ctx (message "bla") :out)]
-      (reply xchg "hi there" :id "313" :headers {"foo" "bar"})
-      (let [msg (out xchg)]
+      (reply! xchg "hi there" :id "313" :headers {"foo" "bar"})
+      (let [msg (get-out xchg)]
         (is (= (body msg) "hi there"))
         (is (= (id msg) "313"))
         (is (= (.get (headers msg) "foo") "bar"))))))
@@ -21,7 +21,7 @@
   (testing "requesting a reply works"
     (let [ctx (context)
           routes (route (from "direct:foo")
-                        (process (fn [x] (reply x "haha"))))]
+                        (process (fn [x] (reply! x "haha"))))]
       (add-routes ctx routes)
       (start ctx)
       (is (= "haha" (request-body ctx "direct:foo" "hehe")))
@@ -33,5 +33,5 @@
           msg (message "testing")
           xchg (exchange ctx msg)
           xchg2 (exchange ctx msg :out)]
-      (is (= "testing" (body (in xchg))))
+      (is (= "testing" (in xchg)))
       (is (out-capable? xchg2)))))
