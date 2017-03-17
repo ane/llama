@@ -12,7 +12,7 @@
     (let [ctx (context)
           xchg (exchange ctx (message "bla") :out)]
       (reply! xchg "hi there" :id "313" :headers {"foo" "bar"})
-      (let [msg (get-out xchg)]
+      (let [msg (exchange-out xchg)]
         (is (= (body msg) "hi there"))
         (is (= (id msg) "313"))
         (is (= (.get (headers msg) "foo") "bar"))))))

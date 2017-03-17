@@ -131,6 +131,31 @@
   (let [producer (.createProducerTemplate ctx)]
     (.requestBodyAndHeaders producer endpoint body headers)))
 
+(defn set-body!
+  "Set the body of `msg` to body."
+  [^Message msg body]
+  (.setBody msg body))
+
+(defn set-in!
+  "Set the **In** part of an exchange to `m`. If you want to set the body directly use [[in!]]."
+  [xchg m]
+  (.setIn xchg m))
+
+(defn set-out!
+  "Set the **Out** part of an exchange to `m`. No-op on **InOnly** exchanges. If you want to set the body directly use [[out!]]."
+  [xchg m]
+  (when (out-capable? xchg)
+    (.setOut xchg m)))
+
+(defn exchange-in
+  [^Exchange x]
+  (.getIn x))
+
+(defn exchange-out
+  [^Exchange x]
+  (when (out-capable? x)
+    (.getOut x)))
+
 (defn in
   "With 1 arg, get the body of the **In** part of an `InOut` exchange `x`. With second arg `h`, get the header `h`
   from `x`."
@@ -140,21 +165,12 @@
 (defn in!
   "Set the **body** of the In message to `body`. Compare with [[set-in!]]."
   [exchange body]
-  (set-body (get-in exchange) body))
+  (set-body! (exchange-in exchange) body))
 
 (defn out!
   [exchange body]
   (when (out-capable?)
-    (set-body (get-out exchange) body)))
-
-(defn get-in
-  [^Exchange x]
-  (.getIn x))
-
-(defn get-out
-  [^Exchange x]
-  (when (out-capable? x)
-    (.getOut x)))
+    (set-body! (exchange-out exchange) body)))
 
 (defn out
   "With 1 arg, get the body of the **Out** part of an `InOut` exchange `x`. With second arg `h`, get the header `h`
@@ -210,18 +226,3 @@
   [^Message msg]
   (.getMessageId msg))
 
-(defn set-body!
-  "Set the body of `msg` to body."
-  [^Message msg body]
-  (.setBody msg body))
-
-(defn set-in!
-  "Set the **In** part of an exchange to `m`. If you want to set the body directly use [[in!]]."
-  [xchg m]
-  (.setIn xchg m))
-
-(defn set-out!
-  "Set the **Out** part of an exchange to `m`. No-op on **InOnly** exchanges. If you want to set the body directly use [[out!]]."
-  [xchg m]
-  (when (out-capable? xchg)
-    (.setOut xchg m)))
