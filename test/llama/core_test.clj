@@ -33,5 +33,5 @@
           msg (message "testing")
           xchg (exchange ctx msg)
           xchg2 (exchange ctx msg :out)]
-      (is (= "testing" (in xchg)))
+      (is (= "testing" (body (in xchg))))
       (is (out-capable? xchg2)))))

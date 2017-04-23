@@ -15,13 +15,13 @@
           xchg (exchange ctx)
           msg (message "hello")]
       (let [p (fn [x]
-                (->> (in x)
+                (->> (body (in x))
                      str/upper-case
                      str/reverse
-                     (in! x)))]
+                     (set-body! (in x))))]
         (.setIn xchg msg)
         (.process (fn->processor p) xchg)
-        (is (= "OLLEH" (in xchg)))))))
+        (is (= "OLLEH" (body (in xchg))))))))
 
 (deftest routing
   (testing "routing works"
@@ -40,7 +40,7 @@
   (testing "filtering works"
     (let [ctx (context)
           route (route (from "direct:bip")
-                       (filter (fn [x] (not= "hi" (in x))))
+                       (filter (fn [x] (not= "hi" (body (in x)))))
                        (to "mock:filter"))]
       (.addRoutes ctx route)
       (start ctx)
@@ -57,7 +57,8 @@
         aggrefn (fn [x1 x2]
                       (if x1
                         (do
-                          (in! x1 (str (in x1) (in x2)))
+                          (set-body!
+                           (in x1) (str (body (in x1)) (body (in x2))))
                           x1)
                         x2))]
     (testing "aggregation works with completion size"
