@@ -118,7 +118,7 @@
 
   ```
   (route (from \"direct:foo\")
-       (process (fn [x] (reply x \"Is it African or European?\"))))
+         (process (fn [x] (reply x \"Is it African or European?\"))))
   
   ;; start the route, add to context, etc.
 
@@ -158,7 +158,7 @@
     (.getOut x)))
 
 (defn body
-  "Get the body of `msg`. 
+  "Get the body of the `msg`, a `Message`.
   
   See [[in]] and [[out]] for getting the Message out of an Exchange.
 
@@ -177,6 +177,7 @@
   (route (from \"direct:hello\")                   
          (process                                  
            (fn [x] (->> (in x)                   
+                        body
                         cheshire.core/parse-string 
                         :foo                       
                         println))))                
