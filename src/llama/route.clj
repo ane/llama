@@ -78,31 +78,6 @@
     :else (throw (IllegalArgumentException.
                   (format "Arg %s not fn or Processor" p)))))
 
-(defmacro defcontext
-  "Defines `name` to DefaultCamelContext, adding
-  the [RouteBuilder](https://static.javadoc.io/org.apache.camel/camel-core/2.18.2/org/apache/camel/builder/RouteBuilder.html)
-  in `routes`. Note, the routes won't start unless the context isn't already
-  started. Sets `nameStragety` field of `ctx` to `name`. **Remember**, nothing will start unless you call
-  `(start name)`. See [[start]] and [[stop]].
-
-  ```
-  (defcontext foobar
-  (route (from \"activemq:queue:hi\")
-         (process (fn [xchg] (println xchg)))
-         (to \"file:blah\")))
-
-  (start ctx) ; pump a message to activemq on queue hi, will be printed to *out*
-              ; note: this does NOT block! use a loop if you want your program to
-              ; run
-  (stop ctx)  ; shut down
-  ```
-  "
-  [name & routes]
-  `(let [ctx# (DefaultCamelContext.)]
-     (.setName ctx# (str '~name))
-     (doseq [route# (list ~@routes)]
-       (.addRoutes ctx# route#))
-     (def ~name ctx#)))
 
 (defmacro route
   "Build a Camel [Route](http://camel.apache.org/routes.html), using [[from]], [[to]], [[process]] etc.
@@ -328,23 +303,6 @@
   (reify AggregationStrategy
     (aggregate [this x1 x2]
       (myfn x1 x2))))
-
-(defn start
-  "Starts `ctx`, does not block."
-  [^CamelContext ctx]
-  (.start ctx))
-
-(defn stop
-  "Stops `ctx`, shutting down all routes that go along with it."
-  [^CamelContext ctx]
-  (.stop ctx))
-
-(defn context
-  "Create a CamelContext. Optionally pass a [JNDI
-  Context](http://docs.oracle.com/javase/7/docs/api/javax/naming/Context.html?is-external=true)
-  or [Registry](http://camel.apache.org/registry.html)."
-  ([] (DefaultCamelContext.))
-  ([ctx-or-reg] (DefaultCamelContext. ctx-or-reg)))
 
 (defn add-routes
   "Add the routes in `routes` to `ctx`."
